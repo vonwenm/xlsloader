@@ -7,10 +7,14 @@
   :dependencies [[org.clojure/clojure                          "1.6.0"]
                  [cc.qbits/hayt                                "1.4.1"
                   :exclusions [org.flatland/useful]]
+ 		 [org.apache.poi/poi "3.9"]
+		 [org.apache.poi/poi-ooxml "3.9"]
                  [com.datastax.cassandra/cassandra-driver-core "2.0.2"]]
+  :plugins [[lein-difftest "2.0.0"]]    
   :source-paths      ["src/clojure"]
   :java-source-paths ["src/java"]
-  :profiles       {:1.4 {:dependencies [[org.clojure/clojure "1.4.0"]]}
+  :profiles       {:1.3 {:dependencies [[org.clojure/clojure "1.3.0"]]}
+  		   :1.4 {:dependencies [[org.clojure/clojure "1.4.0"]]}
                    :1.5 {:dependencies [[org.clojure/clojure "1.5.1"]]}
                    :master {:dependencies [[org.clojure/clojure "1.7.0-master-SNAPSHOT"]]}
                    :dev {:jvm-opts     ["-Dlog4j.configuration=log4j.properties.unit"
@@ -52,3 +56,9 @@
                     clojurewerkz.cassaforte.debug
                     clojurewerkz.cassaforte.bytes]
           :output-dir "doc/api"})
+
+
+
+
+
+
