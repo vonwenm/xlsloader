@@ -73,3 +73,95 @@
 (->> (load-workbook "GDS360.xlsx")
 	(select-sheet "PT")
      	(select-columns {:A :CUSIP, :B :PURP-TYPE-CODE, :C :PURP-CLASS-CODE, :D :PURP-SUB-CLASS-CODE }))
+     	
+     	
+     	
+(ns cassaforte.docs
+  (:require [clojurewerkz.cassaforte.client :as cc]
+            [clojurewerkz.cassaforte.cql    :as cql]
+            [dk.ative.docjure.spreadsheet   :as as]     
+            ))     	
+     	
+     	
+(defn  load-pt  [ wbfile ] 
+  (->>  (as/load-workbook wbfile)
+  	(as/select-sheet "PT")
+     	(as/select-columns {:A :CUSIP, :B :PURP-TYPE-CODE, :C :PURP-CLASS-CODE, :D :PURP-SUB-CLASS-CODE })))
+  
+(load-pt "GDS360.xlsx")
+     
+
+(defn  write-entity [conn, _feedid, _refdom, _refid, _vtbl, _vcol, _content ]
+  (let 	[	ent-rec {		:feedid 	_feedid   
+                			:refdom  	_refdom
+					:refid   	_refid
+					:vtbl  	 	_vtbl
+					:vcol    	_vcol
+                                     	:content 	_content}]
+	(cql/insert conn "entity_delta" ent-rec)))
+                                     	
+(defn  write-pt [conn,ptrec]                              	
+  (let 	[	feedid 	(int 1 )   
+                refdom  "CUSIP"
+		refid   (ptrec :CUSIP)
+		vtable  "PT"]  
+  (write-entity conn feedid refdom refid vtable "PURP-TYPE-CODE" 	(ptrec :PURP-TYPE-CODE))
+  (write-entity conn feedid refdom refid vtable "PURP-CLASS-CODE" 	(ptrec :PURP-CLASS-CODE))
+  (write-entity conn feedid refdom refid vtable "PURP-SUB-CLASS-CODE" 	(ptrec :PURP-SUB-CLASS-CODE))))
+
+(defn  capture-pt []
+(let 	[	conn 	(cc/connect ["127.0.0.1"])
+        	ptdata	(load-pt "GDS360.xlsx")
+        	ptwrite (fn [ptrec] (write-pt conn ptrec))]      	
+	(cql/use-keyspace conn "new_cql_keyspace")
+	(map ptwrite ptdata )))
+	
+;;============================
+
+
+(defn  load-ra [ wbfile ] 
+  (->>  (as/load-workbook wbfile)
+  	(as/select-sheet "RA")
+     	(as/select-columns {:A :CUSIP, :B :RATG-AGENCY-TYPE, :C :RATG-RATING, :D :RATG-RATING-TYPE })))	
+	
+		
+(defn  write-ra [conn,ptrec]                              	
+  (let 	[	feedid 	(int 1 )   
+                refdom  "CUSIP"
+		refid   (ptrec :CUSIP)
+		vtable  "RA"]  
+  (write-entity conn feedid refdom refid vtable "RATG-AGENCY-TYPE" 	(ptrec :RATG-AGENCY-TYPE))
+  (write-entity conn feedid refdom refid vtable "RATG-RATING" 	(ptrec :RATG-RATING))
+  (write-entity conn feedid refdom refid vtable "RATG-RATING-TYPE" 	(ptrec :RATG-RATING-TYPE))))
+  
+(defn  capture-ra []
+(let 	[	conn 	(cc/connect ["127.0.0.1"])
+        	ptdata	(load-ra "GDS360.xlsx")
+        	ptwrite (fn [ptrec] (write-ra conn ptrec))]      	
+	(cql/use-keyspace conn "new_cql_keyspace")
+	(map ptwrite ptdata )))
+	
+(capture-ra)
+
+
+(defn  capture-all []
+   (do 
+   	(capture-ra)
+   	(capture-pt)))
+   	
+   	
+(defn  capture-all []
+   (do 
+   	(capture-pt)
+   	(capture-ra)))
+
+(ns com.bst.lab.xlsloader 
+  (:use com.bst.lab.xlsloader )  )
+  
+(use 'com.bst.lab.xlsloader)  
+(use 'com.bst.lab) 
+
+(use 'com.bst.lab.xlsloader)  
+(capture-SNP_DEMO)
+
+(com.bst.lab.xlsloader/capture-SNP_DEMO)

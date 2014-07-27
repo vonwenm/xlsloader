@@ -115,6 +115,8 @@
 
 DROP TABLE "entity_delta" ;
 
+TRUNCATE "entity_delta" ;
+
 CREATE TABLE entity_delta (             feedid  	bigint,
                 			refdom  	varchar,
 					refid   	varchar,
@@ -123,7 +125,8 @@ CREATE TABLE entity_delta (             feedid  	bigint,
                                      	content 	varchar,
   PRIMARY KEY ((feedid, refdom, refid), vtbl, vcol)
 );                                  	
-                                     	
+ 
+SELECT * FROM "entity_delta" ;
 
 SELECT * FROM "entity_delta" WHERE  feedid =  1 ;    
 
