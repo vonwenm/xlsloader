@@ -110,5 +110,77 @@
 	(into {} 
 	  (for [[col key] (zipmap cols keys)] [(keyword col) (keyword key)])))
 	  
+	  
+	  
+;;================================
+;;==  LOAD JOB MANAGEMENT       ==
 
-    
+
+(defn demojobs []
+  (execLoadJobs "JOBS.xlsx")
+)
+
+(def  execLoadJobs_JobListSheet "JOBLIST")
+(def  execLoadJobs_JobListCols '( B, A ))
+(def  execLoadJobs_JobListColNames '( JOB, STATUS ))
+(def  execLoadJobs_JobSpecCols '( B, A ))
+(def  execLoadJobs_JobSpecColNames '( SETTING, ITEM ))
+
+(defn activeJob? [Job]
+  (let 	[ status (Job :STATUS)]
+  (if (= status "GO") true  false)))
+  
+ 
+(defn extractJobName [Job]
+   (:JOB Job))
+   
+  
+(defn extractJobSpec [wbfile, Job, ColMap]
+  (load-recs wbfile Job ColMap))  
+  
+(defn xformJobSpec2Map   [jobSpec]
+  (let [	Items		(map #(% :ITEM) 	jobSpec)
+  		Settings	(map #(% :SETTING) 	jobSpec)]
+  (into {} (for [[item setting] (zipmap Items Settings)] [(keyword item) setting]))))
+
+
+(defn makeLoadTask [feedFile, feedFormat]
+  (let	[ directoryCols 	'( E, D, C, B, A )
+          directoryColNames 	'( DESCR, NAME, LINK, SHEET, TABLE)
+          directoryColMap	(make-colmap directoryCols directoryColNames)
+  	  allFormatTbls	(load-recs feedFormat "DIRECTORY" directoryColMap)
+          ]
+  nil
+ ))  
+ 
+(defn execJobSpec [wbfile, Job, ColMap]
+  (let	[ jobSpec  	(extractJobSpec wbfile Job ColMap)
+          jobMap   	(xformJobSpec2Map 	jobSpec)
+          feedFormat  	(:FEED_FORMAT jobMap )
+          feedFile  	(:FEED_FILE	(xformJobSpec2Map 	jobSpec))
+          jobName  	(:JOB_NAME	(xformJobSpec2Map 	jobSpec)) 
+          feedDate  	(:FEED_DATE	(xformJobSpec2Map 	jobSpec))
+          directoryCols 	'( B, A )
+          directoryColNames 	'( DESCR, TABLE)
+          directoryColMap	(make-colmap directoryCols directoryColNames)
+  	  allFormatTbls	(load-recs feedFormat "DIRECTORY" directoryColMap)
+  	  makeTask  (fn [sheet]{:FEED_FILE feedFile, :FEED_SHEET sheet , :COLS directoryCols, :COLNAMES directoryColNames}) 
+          ]
+  (makeLoadTask  feedFile feedFormat)
+ ))  
+         
+
+
+            
+(defn execLoadJobs [wbfile]
+  (let 	[  	joblistcolmap	(make-colmap execLoadJobs_JobListCols execLoadJobs_JobListColNames)
+  		alljobs (load-recs wbfile execLoadJobs_JobListSheet joblistcolmap)
+  		activejobs (filter activeJob? alljobs)
+  		activeJobNames (map extractJobName activejobs)
+  		jobspeccolmap	(make-colmap execLoadJobs_JobSpecCols execLoadJobs_JobSpecColNames)
+  		execJob (fn [job] (execJobSpec wbfile, job, jobspeccolmap))]
+  (into [] (map execJob  activeJobNames))
+  		))
+	  
+
+
