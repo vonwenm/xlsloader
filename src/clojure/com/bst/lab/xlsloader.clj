@@ -96,9 +96,11 @@
 	(map recwrite recset )))
 	
 (defn  write-recsets [server, keyspace, table, & recsets ]
-(let 	[	conn 	(cc/connect [server])
+(let 	[	
+		conn 	(cc/connect [server])
 		keysp	(cql/use-keyspace conn keyspace)
-		setwrite (fn [rset] (write-recset table, conn, rset))]      	
+		setwrite (fn [rset] (write-recset table, conn, rset))
+		]      	
 	(map setwrite recsets )))
 
 (defn  load-recs [ wbfile, sheet, colmap ] 
@@ -154,35 +156,31 @@
   		colNames	(map #(% :COLNAME) 	mappingTable)
   		colMap		(into {} (for [[colsym colname] (zipmap colSymbols colNames)] [(keyword colsym) (keyword colname)]))
         ]
-(hash-map :FEED_FILE feedFile, :FEED_SHEET feedSheet, :FEED_MAP colMap, :FEED_COLS colNames  )
+(hash-map :FEED_FILE feedFile, :FEED_SHEET feedSheet, :FEED_TABLE feedSheet :FEED_MAP colMap, :FEED_COLS colNames  )
         ))
   
 ;; (demojobs)
    
 (defn getField [ fr, fc ]
- (list ( fr (keyword fc))))
+ (str ( fr (keyword fc))))
    
 (defn  scanFRecFld   [ feedId, refDom, refId, vTable, vCol, feedRec ]
   (let	[	
   		cVal  (getField feedRec vCol)
   	]
-  (hash-map :FEEDID feedId, :REFDOM refDom,  :REFID refId, :VTABLE vTable :FCOL vCol :FVAL cVal ) 
+  (hash-map :feedid feedId, :refdom refDom,  :refid refId, :vtbl vTable :vcol vCol :content cVal ) 
   ))
   
-;;scanFRField	(fn [feedCol] (parseFeedRec feedId, refDom, vTable, feedCol, feedRec)
+;;scanFRField	(fn [feedCol] (scanFeedRecFld feedId, refDom, vTable, feedCol, feedRec)
 ;;   (map scanFRField feedRec)
+;;   (map scana feedRec)
 ;;(hash-map :FEEDID feedId, :REFDOM refDom,  :REFID refId, :VTABLE vTable  )
 
 (defn parseFeedRec [ feedId, refDom, vTable, feedCols, feedRec ]
   (let	[	refId 		( feedRec :CUSIP 	)
-		scanFRField	(fn [vCol] ( 
-				(let	[ cVal  (getField feedRec vCol)	]
-  				(hash-map :FEEDID feedId, :REFDOM refDom,  :REFID refId, :VTABLE vTable :FCOL vCol :FVAL cVal ))))
-  		scana	(fn [vCol] ( 
-					(let	[ cVal  (getField feedRec vCol)	]
-  				(hash-map :FEEDID feedId, :REFDOM refDom,  :REFID refId, :VTABLE vTable :FCOL vCol :FVAL cVal ))))
+  		scana	        (fn [vCol] (scanFRecFld feedId, refDom,  refId, vTable, vCol, feedRec))
   	]
-
+(map scana feedCols)
   	))
     
 (defn execLoadTasks [loadTask]
@@ -228,16 +226,31 @@
          
 
 
+(defn  writeEntMap [conn, entRecMap ]
+	(cql/insert conn "entity_delta" entRecMap))
             
 (defn execLoadJobs [wbfile]
-  (let 	[  	joblistcolmap	(make-colmap execLoadJobs_JobListCols execLoadJobs_JobListColNames)
-  		alljobs (load-recs wbfile execLoadJobs_JobListSheet joblistcolmap)
-  		activejobs (filter activeJob? alljobs)
-  		activeJobNames (map extractJobName activejobs)
-  		jobspeccolmap	(make-colmap execLoadJobs_JobSpecCols execLoadJobs_JobSpecColNames)
-  		execJob (fn [job] (execJobSpec wbfile, job, jobspeccolmap))]
-  (into [] (map execJob  activeJobNames))
+  (let 	[  	server			(str "127.0.0.1")
+  		keyspace		(str "new_cql_keyspace")
+  		joblistcolmap		(make-colmap execLoadJobs_JobListCols execLoadJobs_JobListColNames)
+  		alljobs 		(load-recs wbfile execLoadJobs_JobListSheet joblistcolmap)
+  		activejobs 		(filter activeJob? alljobs)
+  		activeJobNames 		(map extractJobName activejobs)
+  		jobspeccolmap		(make-colmap execLoadJobs_JobSpecCols execLoadJobs_JobSpecColNames)
+  		execJob 		(fn [job] (execJobSpec wbfile, job, jobspeccolmap))
+		conn 			(cc/connect [server])
+		keysp			(cql/use-keyspace conn keyspace)
+		printValData 		(fn [jdata] (println jdata ))  
+		writeValData 		(fn [jdata] (writeEntMap conn jdata ))  
+		writeRecData 		(fn [jdata] (map  writeValData jdata ))
+		writeSheetData 		(fn [jdata] (map  writeRecData jdata ))
+		writeJobData 		(fn [jdata] (map  writeSheetData jdata ))
+	
+	]
+  		
+(map writeJobData (map execJob  activeJobNames))
   		))
 	  
 
 
+;; (demojobs)

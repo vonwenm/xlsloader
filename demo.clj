@@ -111,7 +111,9 @@
  	  (columns :vcol :content)
           (where :feedid  (int 1) :refdom  "ISIN"  :refid   "GB1234567890"  :vtbl  	 "IDN" ))
           
-          
+USE "new_cql_keyspace" ;     
+     
+     
 
 DROP TABLE "entity_delta" ;
 
@@ -122,9 +124,21 @@ CREATE TABLE entity_delta (             feedid  	bigint,
 					refid   	varchar,
 					vtbl  	 	varchar,
 					vcol    	varchar,
+					vkey    	varchar,
                                      	content 	varchar,
-  PRIMARY KEY ((feedid, refdom, refid), vtbl, vcol)
+  PRIMARY KEY ((feedid, refdom, refid), vtbl, vcol, vkey)
 );                                  	
+ 
+CREATE TABLE entity_delta (             feedid  	bigint,
+                			refdom  	varchar,
+					refid   	varchar,
+					vtbl  	 	varchar,
+					vcol    	varchar,
+                                     	content 	varchar,
+  PRIMARY KEY ((feedid, refdom, refid), vtbl, vcol )
+);                                  	
+ 
+ 
  
 SELECT * FROM "entity_delta" ;
 
