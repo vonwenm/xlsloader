@@ -143,14 +143,71 @@
   		Settings	(map #(% :SETTING) 	jobSpec)]
   (into {} (for [[item setting] (zipmap Items Settings)] [(keyword item) setting]))))
 
+ (defn buildTaskRec [ feedFile feedFormat specRec ]
+   (let [ 	mappingCols 	'( B, A )
+          	mappingColNames '( COLNAME, COL )
+          	mappingColMap	(make-colmap mappingCols mappingColNames)
+   		feedSheet 	(specRec :SHEET )
+   		mapTableLoc	(specRec :TABLE )
+		mappingTable  	(load-recs feedFormat mapTableLoc mappingColMap)
+		colSymbols	(map #(% :COL) 		mappingTable)
+  		colNames	(map #(% :COLNAME) 	mappingTable)
+  		colMap		(into {} (for [[colsym colname] (zipmap colSymbols colNames)] [(keyword colsym) (keyword colname)]))
+        ]
+(hash-map :FEED_FILE feedFile, :FEED_SHEET feedSheet, :FEED_MAP colMap, :FEED_COLS colNames  )
+        ))
+  
+;; (demojobs)
+   
+(defn getField [ fr, fc ]
+ (list ( fr (keyword fc))))
+   
+(defn  scanFRecFld   [ feedId, refDom, refId, vTable, vCol, feedRec ]
+  (let	[	
+  		cVal  (getField feedRec vCol)
+  	]
+  (hash-map :FEEDID feedId, :REFDOM refDom,  :REFID refId, :VTABLE vTable :FCOL vCol :FVAL cVal ) 
+  ))
+  
+;;scanFRField	(fn [feedCol] (parseFeedRec feedId, refDom, vTable, feedCol, feedRec)
+;;   (map scanFRField feedRec)
+;;(hash-map :FEEDID feedId, :REFDOM refDom,  :REFID refId, :VTABLE vTable  )
 
+(defn parseFeedRec [ feedId, refDom, vTable, feedCols, feedRec ]
+  (let	[	refId 		( feedRec :CUSIP 	)
+		scanFRField	(fn [vCol] ( 
+				(let	[ cVal  (getField feedRec vCol)	]
+  				(hash-map :FEEDID feedId, :REFDOM refDom,  :REFID refId, :VTABLE vTable :FCOL vCol :FVAL cVal ))))
+  		scana	(fn [vCol] ( 
+					(let	[ cVal  (getField feedRec vCol)	]
+  				(hash-map :FEEDID feedId, :REFDOM refDom,  :REFID refId, :VTABLE vTable :FCOL vCol :FVAL cVal ))))
+  	]
+
+  	))
+    
+(defn execLoadTasks [loadTask]
+  (let [ 	feedFile 	( loadTask :FEED_FILE 	)
+ 		feedSheet	( loadTask :FEED_SHEET	)  
+ 		feedMap 	( loadTask :FEED_MAP 	)
+		feedCols	( loadTask :FEED_COLS 	)	
+ 		feedData        ( load-recs feedFile feedSheet feedMap)
+ 		feedId 		( int 1)
+ 		refDom 		( str "CUSIP")
+ 		vTable 		( loadTask :FEED_TABLE	)
+		parseFRec	(fn [feedRec] (parseFeedRec feedId, refDom, vTable, feedCols, feedRec))
+	]
+   (map parseFRec feedData)
+   ))	
+  		
 (defn makeLoadTask [feedFile, feedFormat]
   (let	[ directoryCols 	'( E, D, C, B, A )
           directoryColNames 	'( DESCR, NAME, LINK, SHEET, TABLE)
           directoryColMap	(make-colmap directoryCols directoryColNames)
-  	  allFormatTbls	(load-recs feedFormat "DIRECTORY" directoryColMap)
+  	  mappingSpec		(load-recs feedFormat "DIRECTORY" directoryColMap)
+  	  taskMapper 		(fn [specRec] (buildTaskRec feedFile, feedFormat, specRec))
+          loadTasks		(map taskMapper mappingSpec)
           ]
-  nil
+  (map execLoadTasks loadTasks)
  ))  
  
 (defn execJobSpec [wbfile, Job, ColMap]
@@ -164,7 +221,7 @@
           directoryColNames 	'( DESCR, TABLE)
           directoryColMap	(make-colmap directoryCols directoryColNames)
   	  allFormatTbls	(load-recs feedFormat "DIRECTORY" directoryColMap)
-  	  makeTask  (fn [sheet]{:FEED_FILE feedFile, :FEED_SHEET sheet , :COLS directoryCols, :COLNAMES directoryColNames}) 
+  	  makeTask  (fn [sheet]{:FEED_FILE feedFile, :FEED_SHEET sheet , :FEED_TABLE sheet , :COLS directoryCols, :COLNAMES directoryColNames}) 
           ]
   (makeLoadTask  feedFile feedFormat)
  ))  
